@@ -1,16 +1,29 @@
 import * as Location from "expo-location";
+import { API_KEY } from "@env";
+import { Constants } from "expo";
 
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
-import { StyleSheet, Text, View, Dimensions, ScrollView } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Dimensions,
+  ScrollView,
+  ActivityIndicator,
+} from "react-native";
 
 const WINDOW_WIDTH = Dimensions.get("window").width;
 
+const windowWidthHalf = WINDOW_WIDTH / 2;
+
 export default function App() {
-  const [city, setCity] = useState("getting your location..");
+  const [loading, setLoading] = useState(true);
+  const [city, setCity] = useState("현재 위치..");
+  const [dayWeathers, setDayWeathers] = useState([]);
   const [permission, setPermission] = useState(true);
 
-  const getLocation = async () => {
+  const getWeather = async () => {
     const { granted } = await Location.requestForegroundPermissionsAsync();
     if (!granted) {
       setPermission(false);
@@ -26,10 +39,22 @@ export default function App() {
       longitude,
     });
     setCity(location[0].city);
+
+    //get weather
+    const response = await fetch(
+      `https://api.openweathermap.org/data/2.5/forecast?units=metric&lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
+    );
+    const json = await response.json();
+
+    //set api data on dayWeather
+    //useage: dayWeathers[day-1].weather[0].main or .description
+    setDayWeathers(json.list);
+
+    setLoading(false);
   };
 
   useEffect(() => {
-    getLocation();
+    getWeather();
   }, []);
 
   return (
@@ -40,25 +65,33 @@ export default function App() {
       <ScrollView
         showsHorizontalScrollIndicator={false}
         horizontal
-        ContentContainerStyle={styles.weather}
-        pagingEnabled
+        ContentContainerStyle={styles.weathers}
       >
-        <View style={styles.day}>
-          <Text style={styles.temp}>11</Text>
-          <Text style={styles.description}>rainny</Text>
-        </View>
-        <View style={styles.day}>
-          <Text style={styles.temp}>12</Text>
-          <Text style={styles.description}>rainny</Text>
-        </View>
-        <View style={styles.day}>
-          <Text style={styles.temp}>13</Text>
-          <Text style={styles.description}>rainny</Text>
-        </View>
-        <View style={styles.day}>
-          <Text style={styles.temp}>14</Text>
-          <Text style={styles.description}>rainny</Text>
-        </View>
+        {loading === true ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color="#00ff00" />
+          </View>
+        ) : (
+          dayWeathers.map((dayWeather, index) => (
+            <View key={index} style={styles.weather}>
+              <Text style={styles.date}>
+                {dayWeather.dt_txt.substr(5, 2).charAt(0) === "0"
+                  ? `${dayWeather.dt_txt.substr(6, 1)}`
+                  : `${dayWeather.dt_txt.substr(5, 2)}`}
+                월
+                {dayWeather.dt_txt.substr(8, 2).charAt(0) === "0"
+                  ? ` ${dayWeather.dt_txt.substr(9, 1)}`
+                  : ` ${dayWeather.dt_txt.substr(8, 2)}`}
+                일{` ${dayWeather.dt_txt.substr(11, 2)}`}시
+              </Text>
+              <Text style={styles.temp}>{dayWeather.main.temp}℃</Text>
+              <Text>체감온도 : {dayWeather.main.feels_like}℃</Text>
+              <Text style={styles.description}>
+                {dayWeather.weather[0].description}
+              </Text>
+            </View>
+          ))
+        )}
       </ScrollView>
       <View style={styles.footer}></View>
     </View>
@@ -68,31 +101,42 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "yellow",
+    backgroundColor: "#000000",
   },
   city: {
-    flex: 1,
+    flex: 3,
     justifyContent: "center",
     alignItems: "center",
   },
   cityName: {
     fontSize: 70,
+    color: "#FFFFFF",
   },
-  weather: {
-    backgroundColor: "grey",
-  },
-  day: {
-    width: WINDOW_WIDTH,
+  weathers: {
     justifyContent: "center",
     alignItems: "center",
   },
+  weather: {
+    width: WINDOW_WIDTH / 2,
+    height: WINDOW_WIDTH / 2,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F2F2F2",
+    borderRadius: WINDOW_WIDTH / 4,
+    margin: WINDOW_WIDTH / 20,
+  },
+  loading: { width: WINDOW_WIDTH },
+  date: {
+    fontSize: WINDOW_WIDTH / 20,
+    marginBottom: 10,
+  },
   temp: {
-    fontSize: "60",
+    fontSize: WINDOW_WIDTH / 24,
   },
   description: {
-    fontSize: 40,
+    fontSize: WINDOW_WIDTH / 22,
   },
   footer: {
-    flex: 0.5,
+    flex: 1,
   },
 });
