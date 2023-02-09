@@ -2,6 +2,8 @@ import * as Location from "expo-location";
 import { API_KEY } from "@env";
 import { Constants } from "expo";
 
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect, useState } from "react";
 import {
@@ -15,20 +17,31 @@ import {
 
 const WINDOW_WIDTH = Dimensions.get("window").width;
 
-const windowWidthHalf = WINDOW_WIDTH / 2;
+const icons = {
+  ThunderStorm: "weather-lightning",
+  Drizzle: "weather-rainy",
+  Rain: "weather-pouring",
+  Snow: "weather-snowy-heavy",
+  Atmosphere: "weather-fog",
+  Clear: "weather-sunny",
+  Clouds: "weather-cloudy",
+};
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
-  const [city, setCity] = useState("현재 위치..");
-  const [dayWeathers, setDayWeathers] = useState([]);
-  const [permission, setPermission] = useState(true);
+  const [loading, setLoading] = useState(true); //loading page
+  const [city, setCity] = useState("현재 위치.."); //city user located
+  const [dayWeathers, setDayWeathers] = useState([]); //weather data[] from weather api
+  const [permission, setPermission] = useState(true); //foreground permission
 
   const getWeather = async () => {
+    //request user location
     const { granted } = await Location.requestForegroundPermissionsAsync();
     if (!granted) {
       setPermission(false);
       setCity("unknown");
     }
+
+    //get user location
     const {
       coords: { latitude, longitude },
     } = await Location.getCurrentPositionAsync({
@@ -38,18 +51,21 @@ export default function App() {
       latitude,
       longitude,
     });
+
+    //save user location
     setCity(location[0].city);
 
     //get weather
     const response = await fetch(
-      `https://api.openweathermap.org/data/2.5/forecast?units=metric&lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
+      `https://api.openweathermap.org/data/2.5/forecast?units=metric&lang=kr&lat=${latitude}&lon=${longitude}&appid=${API_KEY}`
     );
     const json = await response.json();
 
     //set api data on dayWeather
-    //useage: dayWeathers[day-1].weather[0].main or .description
+    //How to use: dayWeathers[day-1].weather[0].main or .description
     setDayWeathers(json.list);
 
+    //finish loading page
     setLoading(false);
   };
 
@@ -62,6 +78,7 @@ export default function App() {
       <View style={styles.city}>
         <Text style={styles.cityName}>{city}</Text>
       </View>
+
       <ScrollView
         showsHorizontalScrollIndicator={false}
         horizontal
@@ -89,15 +106,22 @@ export default function App() {
               <Text style={styles.description}>
                 {dayWeather.weather[0].description}
               </Text>
+              <MaterialCommunityIcons
+                name={icons[dayWeather.weather[0].main]}
+                size={24}
+                color="black"
+              />
             </View>
           ))
         )}
       </ScrollView>
+
       <View style={styles.footer}></View>
     </View>
   );
 }
 
+//styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
